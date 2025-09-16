@@ -6,10 +6,6 @@ on:
       - master
   pull_request:
 
-permissions:
-  actions: read
-  contents: read
-
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
@@ -18,10 +14,9 @@ jobs:
       # 1. Checkout repository
       - uses: actions/checkout@v4
         with:
-          filter: tree:0
           fetch-depth: 0
 
-      # 2. Setup Node.js and enable caching
+      # 2. Setup Node.js
       - uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -33,17 +28,18 @@ jobs:
       # 4. Run lint, tests, and build (for all projects)
       - run: npx nx run-many -t lint test build
 
-      # 5. Build only your Angular app (with correct baseHref for GitHub Pages)
+      # 5. Build Angular app for GitHub Pages
       - name: Build eParts for GitHub Pages
         run: npx nx build eParts --configuration=production --base-href=/eParts/
 
-      # 6. Deploy dist output to GitHub Pages
+      # 6. Deploy to GitHub Pages
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: dist/apps/eParts
+        personal_token: ${{ secrets.GH_PAT }}
+        publish_dir: dist/apps/eParts
 
-      # 7. (Optional) Self-healing CI (Nx will suggest fixes if things fail)
+
+      # 7. Nx self-healing CI
       - run: npx nx fix-ci
         if: always()
