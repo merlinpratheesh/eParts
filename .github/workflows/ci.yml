@@ -1,4 +1,4 @@
-name: CI
+name: CI/CD
 
 on:
   push:
@@ -11,31 +11,39 @@ permissions:
   contents: read
 
 jobs:
-  main:
+  build-and-deploy:
     runs-on: ubuntu-latest
+
     steps:
+      # 1. Checkout repository
       - uses: actions/checkout@v4
         with:
           filter: tree:0
           fetch-depth: 0
 
-      # This enables task distribution via Nx Cloud
-      # Run this command as early as possible, before dependencies are installed
-      # Learn more at https://nx.dev/ci/reference/nx-cloud-cli#npx-nxcloud-startcirun
-      # Uncomment this line to enable task distribution
-      # - run: npx nx start-ci-run --distribute-on="3 linux-medium-js" --stop-agents-after="build"
-
-      # Cache node_modules
+      # 2. Setup Node.js and enable caching
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: 'npm'
 
+      # 3. Install dependencies
       - run: npm ci --legacy-peer-deps
 
-      # Prepend any command with "nx-cloud record --" to record its logs to Nx Cloud
-      # - run: npx nx-cloud record -- echo Hello World
+      # 4. Run lint, tests, and build (for all projects)
       - run: npx nx run-many -t lint test build
-      # Nx Cloud recommends fixes for failures to help you get CI green faster. Learn more: https://nx.dev/ci/features/self-healing-ci
+
+      # 5. Build only your Angular app (with correct baseHref for GitHub Pages)
+      - name: Build eParts for GitHub Pages
+        run: npx nx build eParts --configuration=production --base-href=/eParts/
+
+      # 6. Deploy dist output to GitHub Pages
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: dist/apps/eParts
+
+      # 7. (Optional) Self-healing CI (Nx will suggest fixes if things fail)
       - run: npx nx fix-ci
         if: always()
