@@ -1,4 +1,4 @@
-name: CI/CD
+name: CI/CD Local Test
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
   pull_request:
 
 jobs:
-  build-and-deploy:
+  build-and-serve:
     runs-on: ubuntu-latest
 
     steps:
@@ -25,21 +25,21 @@ jobs:
       # 3. Install dependencies
       - run: npm ci --legacy-peer-deps
 
-      # 4. Run lint, tests, and build (for all projects)
-      - run: npx nx run-many -t lint test build
+      # 4. Run lint and tests
+      - run: npx nx run-many -t lint test
 
-      # 5. Build Angular app for GitHub Pages
-      - name: Build eParts for GitHub Pages
-        run: npx nx build eParts --configuration=production --base-href=/eParts/
+      # 5. Build Angular app
+      - name: Build eParts
+        run: npx nx build eParts --configuration=production
 
-      # 6. Deploy to GitHub Pages
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          personal_token: ${{ secrets.GH_PAT }}
-          publish_dir: dist/apps/eParts
+      # 6. Install serve globally
+      - name: Install serve
+        run: npm install -g serve
 
+      # 7. Serve the built app
+      - name: Serve app for testing
+        run: serve -s dist/apps/eParts -l 5000
 
-      # 7. Nx self-healing CI
+      # 8. Nx self-healing CI
       - run: npx nx fix-ci
         if: always()
